@@ -2,8 +2,7 @@ import torch
 import torchaudio as ta
 from pydub import AudioSegment
 from pathlib import Path
-from src.tts import ChatterboxTTS
-# from chatterbox.tts import ChatterboxTTS (in lib - not in src - old one)
+from src.tts import ChatterboxTTS, Conditionals
 
 
 # Detect device
@@ -33,6 +32,17 @@ model = ChatterboxTTS.from_pretrained(device=device)
 voice_sample = BASE_DIR / "samples" / "shru.wav"
 voice_sample = convert_to_wav(voice_sample)
 
+# === Conditional caching ===
+conds_cache = voice_sample.with_suffix(".conds.pt")  # e.g. shru.conds.pt
+if conds_cache.exists():
+    print(f"⚡ Loading cached conditionals from {conds_cache.name}")
+    model.conds = Conditionals.load(conds_cache).to(device)
+else:
+    print(f"🎙️ Preparing conditionals from {voice_sample.name}")
+    model.prepare_conditionals(str(voice_sample))
+    model.conds.save(conds_cache)
+    print(f"💾 Saved conditionals to {conds_cache.name}")
+
 # Text to synthesize
 TEXT = (
     "Hi, good morning! Today I have completed working on the LLM integration and have 2 more tickets pending from the ASU board. "
@@ -42,15 +52,21 @@ TEXT = (
     "Thank you!"
 )
 
-# Generate audio using voice prompt
-wav = model.generate(
-    text=TEXT,
-    audio_prompt_path=str(voice_sample),
-)
+times = 1
 
-# Save the output audio
-output_path = BASE_DIR / "output" / "tts" / "op8.wav"
-output_path.parent.mkdir(parents=True, exist_ok=True)
-ta.save(str(output_path), wav.cpu(), model.sr)
+while(times<5):
+    TEXT1 = input("Enter the text: ")
+    path = input("Enter path: ")
 
-print(f"✅ Done. Audio saved to {output_path}")
+    print("🔊 Synthesizing...")
+    # Generate audio using cached conditionals
+    wav = model.generate(
+        text= TEXT1,
+    )
+
+    # Save the output audio
+    output_path = BASE_DIR / "output" / "tts" / f"{path}.wav"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    ta.save(str(output_path), wav.cpu(), model.sr)
+    print(f"✅ Done. Audio saved to {output_path}")
+    times+=1

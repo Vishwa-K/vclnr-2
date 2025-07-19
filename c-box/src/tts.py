@@ -18,6 +18,7 @@ from .models.t3.modules.cond_enc import T3Cond
 
 REPO_ID = "ResembleAI/chatterbox"
 
+
 def punc_norm(text: str) -> str:
     if len(text) == 0:
         return "You need to add some text for me to talk."
@@ -49,6 +50,7 @@ def punc_norm(text: str) -> str:
 
     return text
 
+
 @dataclass
 class Conditionals:
     t3: T3Cond
@@ -74,6 +76,7 @@ class Conditionals:
             map_location = torch.device(map_location)
         kwargs = torch.load(fpath, map_location=map_location, weights_only=True)
         return cls(T3Cond(**kwargs['t3']), kwargs['gen'])
+
 
 class ChatterboxTTS:
     ENC_COND_LEN = 6 * S3_SR
